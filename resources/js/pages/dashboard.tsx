@@ -1,8 +1,9 @@
 import CreateFeedForm from '@/components/create-feed-form';
+import DashboardLibraryUpload from '@/components/dashboard-library-upload';
 import FeedList from '@/components/feed-list';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -23,14 +24,43 @@ interface Feed {
     updated_at: string;
 }
 
+interface MediaFile {
+    id: number;
+    file_path: string;
+    file_hash: string;
+    mime_type: string;
+    filesize: number;
+    duration?: number;
+    created_at: string;
+    updated_at: string;
+}
+
+interface LibraryItem {
+    id: number;
+    user_id: number;
+    media_file_id: number;
+    title: string;
+    description?: string;
+    source_type: string;
+    source_url?: string;
+    created_at: string;
+    updated_at: string;
+    media_file?: MediaFile;
+}
+
 interface DashboardProps {
     feeds: Feed[];
+    libraryItems: LibraryItem[];
     flash?: {
         success?: string;
     };
 }
 
-export default function Dashboard({ feeds, flash }: DashboardProps) {
+export default function Dashboard({ feeds, libraryItems, flash }: DashboardProps) {
+    const handleUploadSuccess = () => {
+        router.reload({ only: ['libraryItems'] });
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
@@ -50,15 +80,8 @@ export default function Dashboard({ feeds, flash }: DashboardProps) {
                         <FeedList feeds={feeds} />
                     </div>
 
-                    {/* Top Middle Panel */}
-                    <div className="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
-                        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
-                            <div className="text-center">
-                                <h3 className="mb-2 text-lg font-semibold">Library Items</h3>
-                                <p className="text-sm">Your media library will appear here</p>
-                            </div>
-                        </div>
-                    </div>
+                    {/* Top Middle Panel - Library Items */}
+                    <DashboardLibraryUpload libraryItems={libraryItems} onUploadSuccess={handleUploadSuccess} />
 
                     {/* Top Right Panel */}
                     <div className="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">

@@ -24,7 +24,7 @@ interface LibraryItem {
     description?: string;
     source_type: string;
     source_url?: string;
-    media_file: MediaFile;
+    media_file?: MediaFile | null;
 }
 
 interface FeedItem {
@@ -248,8 +248,14 @@ export default function EditFeed({ feed, userLibraryItems }: EditFeedProps) {
                                                 <div className="min-w-0 flex-1">
                                                     <p className="truncate font-medium">{libraryItem.title}</p>
                                                     <p className="text-sm text-muted-foreground">
-                                                        {formatDuration(libraryItem.media_file.duration)} •{' '}
-                                                        {formatFileSize(libraryItem.media_file.filesize)}
+                                                        {libraryItem.media_file ? (
+                                                            <>
+                                                                {formatDuration(libraryItem.media_file.duration)} •{' '}
+                                                                {formatFileSize(libraryItem.media_file.filesize)}
+                                                            </>
+                                                        ) : (
+                                                            'Processing...'
+                                                        )}
                                                     </p>
                                                 </div>
                                                 <Button
@@ -276,8 +282,14 @@ export default function EditFeed({ feed, userLibraryItems }: EditFeedProps) {
                                                 <div className="min-w-0 flex-1">
                                                     <p className="truncate text-sm font-medium">{libraryItem.title}</p>
                                                     <p className="text-xs text-muted-foreground">
-                                                        {formatDuration(libraryItem.media_file.duration)} •{' '}
-                                                        {formatFileSize(libraryItem.media_file.filesize)}
+                                                        {libraryItem.media_file ? (
+                                                            <>
+                                                                {formatDuration(libraryItem.media_file.duration)} •{' '}
+                                                                {formatFileSize(libraryItem.media_file.filesize)}
+                                                            </>
+                                                        ) : (
+                                                            'Processing...'
+                                                        )}
                                                     </p>
                                                 </div>
                                                 <Button variant="ghost" size="sm" onClick={() => addLibraryItem(libraryItem.id)}>

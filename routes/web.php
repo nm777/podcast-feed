@@ -15,9 +15,14 @@ Route::get('/rss/{user_guid}/{feed_slug}', [RssController::class, 'show'])->name
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
         $feeds = auth()->user()->feeds()->latest()->get();
+        $libraryItems = auth()->user()->libraryItems()
+            ->with('mediaFile')
+            ->latest()
+            ->get();
 
         return Inertia::render('dashboard', [
             'feeds' => $feeds,
+            'libraryItems' => $libraryItems,
         ]);
     })->name('dashboard');
 

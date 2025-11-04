@@ -27,7 +27,7 @@ class LibraryController extends Controller
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
             'source_type' => 'required|in:upload,url,youtube',
-            'file' => 'required_if:source_type,upload|file|mimes:mp3,mp4,m4a|max:512000',
+            'file' => 'required_if:source_type,upload|file|mimes:mp3,mp4,m4a,wav,ogg|max:512000',
             'source_url' => 'required_if:source_type,url,youtube|url',
         ]);
 

@@ -153,7 +153,7 @@ export default function LibraryIndex({ libraryItems, flash }: LibraryIndexProps)
                             <DialogHeader>
                                 <DialogTitle>Upload Media File</DialogTitle>
                                 <DialogDescription>
-                                    Upload audio or video files to your library. Supported formats: MP3, MP4, M4A, WAV, OGG
+                                    Upload audio or video files to your library. Supported formats: MP3, MP4, M4A, WAV, OGG (Max: 500MB)
                                 </DialogDescription>
                             </DialogHeader>
                             <form onSubmit={handleSubmit} className="space-y-4">
