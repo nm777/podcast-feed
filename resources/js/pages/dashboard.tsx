@@ -18,6 +18,7 @@ interface Feed {
     is_public: boolean;
     slug: string;
     user_guid: string;
+    token?: string;
     created_at: string;
     updated_at: string;
 }

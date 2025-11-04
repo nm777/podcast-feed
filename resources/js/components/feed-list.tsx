@@ -11,6 +11,7 @@ interface Feed {
     is_public: boolean;
     slug: string;
     user_guid: string;
+    token?: string;
     created_at: string;
     updated_at: string;
 }
@@ -35,7 +36,11 @@ export default function FeedList({ feeds, canEdit = true }: FeedListProps) {
     };
 
     const getFeedUrl = (feed: Feed) => {
-        return `/rss/${feed.user_guid}/${feed.slug}`;
+        const baseUrl = `/rss/${feed.user_guid}/${feed.slug}`;
+        if (!feed.is_public && feed.token) {
+            return `${baseUrl}?token=${feed.token}`;
+        }
+        return baseUrl;
     };
 
     if (feeds.length === 0) {
@@ -78,24 +83,24 @@ export default function FeedList({ feeds, canEdit = true }: FeedListProps) {
                         </div>
                     </CardHeader>
                     <CardContent className="pt-0">
-                        <div className="flex items-center justify-between">
+                        <div className="space-y-3">
                             <div className="text-sm text-muted-foreground">
                                 <a href={getFeedUrl(feed)} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
                                     {getFeedUrl(feed)}
                                 </a>
                             </div>
-                            <div className="ml-4 flex items-center gap-2">
-                                {canEdit && (
+                            {canEdit && (
+                                <div className="flex items-center gap-2">
                                     <Button variant="outline" size="sm" asChild>
                                         <a href={`/feeds/${feed.id}/edit`}>
                                             <Edit className="h-4 w-4" />
                                         </a>
                                     </Button>
-                                )}
-                                <Button variant="destructive" size="sm" onClick={() => handleDelete(feed.id)}>
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            </div>
+                                    <Button variant="destructive" size="sm" onClick={() => handleDelete(feed.id)}>
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                     </CardContent>
                 </Card>
