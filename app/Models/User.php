@@ -42,6 +42,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the library items for the user.
+     */
+    public function libraryItems()
+    {
+        return $this->hasMany(LibraryItem::class);
+    }
+
+    /**
      * Get attributes that should be cast.
      *
      * @return array<string, string>

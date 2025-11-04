@@ -16,4 +16,9 @@ class MediaFile extends Model
         'filesize',
         'duration',
     ];
+
+    public function libraryItems()
+    {
+        return $this->hasMany(LibraryItem::class);
+    }
 }
