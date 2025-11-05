@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\LibraryItemRequest;
 use App\Jobs\ProcessMediaFile;
 use App\Models\LibraryItem;
-use Illuminate\Http\Request;
+use App\Models\MediaFile;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -22,26 +23,46 @@ class LibraryController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(LibraryItemRequest $request)
     {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'file' => 'required|file|mimes:mp3,mp4,m4a,wav,ogg|max:512000',
-        ]);
+        $validated = $request->validated();
+
+        $mediaFileId = null;
+        $message = '';
+
+        // Check if URL already exists in our system
+        if ($request->filled('url')) {
+            $existingMediaFile = MediaFile::findBySourceUrl($request->input('url'));
+
+            if ($existingMediaFile) {
+                $mediaFileId = $existingMediaFile->id;
+                $message = 'Media file already exists. Added to your library.';
+            }
+        }
 
         $libraryItem = LibraryItem::create([
             'user_id' => auth()->id(),
             'title' => $validated['title'],
-            'description' => $validated['description'],
-            'source_type' => 'upload',
+            'description' => $validated['description'] ?? null,
+            'source_type' => $request->hasFile('file') ? 'upload' : 'url',
+            'source_url' => $request->input('url'),
+            'media_file_id' => $mediaFileId,
         ]);
 
-        $filePath = $request->file('file')->store('temp-uploads');
-        ProcessMediaFile::dispatch($libraryItem, null, $filePath);
+        if ($mediaFileId) {
+            // File already exists, no processing needed
+            $message = $message ?: 'Media file already exists. Added to your library.';
+        } elseif ($request->hasFile('file')) {
+            $filePath = $request->file('file')->store('temp-uploads');
+            ProcessMediaFile::dispatch($libraryItem, null, $filePath);
+            $message = 'Media file uploaded successfully. Processing...';
+        } elseif ($request->filled('url')) {
+            ProcessMediaFile::dispatch($libraryItem, $request->input('url'), null);
+            $message = 'Media file URL added successfully. Downloading and processing...';
+        }
 
         return redirect()->route('library.index')
-            ->with('success', 'Media file uploaded successfully. Processing...');
+            ->with('success', $message);
     }
 
     public function destroy($id)

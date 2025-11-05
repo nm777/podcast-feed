@@ -15,6 +15,7 @@ class MediaFile extends Model
         'mime_type',
         'filesize',
         'duration',
+        'source_url',
     ];
 
     public function libraryItems()
@@ -25,5 +26,13 @@ class MediaFile extends Model
     public function getPublicUrlAttribute(): string
     {
         return url(route('media.show', ['file_path' => $this->file_path]));
+    }
+
+    /**
+     * Find a media file by source URL.
+     */
+    public static function findBySourceUrl(string $sourceUrl): ?static
+    {
+        return static::where('source_url', $sourceUrl)->first();
     }
 }

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useForm } from '@inertiajs/react';
-import { FileAudio, FileVideo, Plus, Upload } from 'lucide-react';
+import { FileAudio, FileVideo, Globe, Plus, Upload } from 'lucide-react';
 import { useState } from 'react';
 
 interface MediaFile {
@@ -41,18 +41,38 @@ export default function DashboardLibraryUpload({ libraryItems, onUploadSuccess }
     const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
     const [isDragOver, setIsDragOver] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [inputType, setInputType] = useState<'file' | 'url'>('file');
 
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const { data, setData, post, processing, errors, reset, transform } = useForm({
         title: '',
         description: '',
         file: null as File | null,
+        url: '',
     });
 
     const handleFileSelect = (file: File) => {
         setSelectedFile(file);
         setData('file', file);
+        setData('url', '');
         if (!data.title) {
             setData('title', file.name.replace(/\.[^/.]+$/, ''));
+        }
+    };
+
+    const handleUrlChange = (url: string) => {
+        setData('url', url);
+        setData('file', null);
+        setSelectedFile(null);
+        if (!data.title && url) {
+            try {
+                const filename = new URL(url).pathname.split('/').pop() || '';
+                const title = filename.replace(/\.[^/.]+$/, '');
+                if (title) {
+                    setData('title', title);
+                }
+            } catch {
+                // Invalid URL, ignore
+            }
         }
     };
 
@@ -79,6 +99,14 @@ export default function DashboardLibraryUpload({ libraryItems, onUploadSuccess }
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Transform data to only include relevant field based on input type
+        transform((data) => ({
+            title: data.title,
+            description: data.description,
+            ...(inputType === 'file' ? { file: data.file } : { url: data.url }),
+        }));
+
         post(route('library.store'), {
             onSuccess: () => {
                 reset();
@@ -122,39 +150,83 @@ export default function DashboardLibraryUpload({ libraryItems, onUploadSuccess }
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[425px]">
                         <DialogHeader>
-                            <DialogTitle>Upload Media File</DialogTitle>
+                            <DialogTitle>Add Media File</DialogTitle>
                             <DialogDescription>
-                                Upload audio or video files to your library. Supported formats: MP3, MP4, M4A, WAV, OGG (Max: 500MB)
+                                Upload a file or provide a URL to add media to your library. Supported formats: MP3, MP4, M4A, WAV, OGG (Max: 500MB)
                             </DialogDescription>
                         </DialogHeader>
                         <form onSubmit={handleSubmit} className="space-y-4">
-                            <div
-                                className={`rounded-lg border-2 border-dashed p-6 text-center transition-colors ${
-                                    isDragOver ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-300 dark:border-gray-600'
-                                }`}
-                                onDrop={handleDrop}
-                                onDragOver={handleDragOver}
-                                onDragLeave={handleDragLeave}
-                            >
-                                <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Drag and drop a file here, or click to select</p>
-                                <input
-                                    type="file"
-                                    accept="audio/*,video/*"
-                                    onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
-                                    className="hidden"
-                                    id="file-upload"
-                                />
-                                <Label htmlFor="file-upload" className="cursor-pointer text-sm text-blue-600 hover:text-blue-500">
-                                    Browse Files
-                                </Label>
+                            <div>
+                                <Label>Source Type</Label>
+                                <div className="flex gap-2">
+                                    <Button
+                                        type="button"
+                                        variant={inputType === 'file' ? 'default' : 'outline'}
+                                        size="sm"
+                                        onClick={() => setInputType('file')}
+                                    >
+                                        <Upload className="mr-2 h-4 w-4" />
+                                        Upload File
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant={inputType === 'url' ? 'default' : 'outline'}
+                                        size="sm"
+                                        onClick={() => setInputType('url')}
+                                    >
+                                        <Globe className="mr-2 h-4 w-4" />
+                                        From URL
+                                    </Button>
+                                </div>
                             </div>
+
+                            {inputType === 'file' ? (
+                                <div>
+                                    <div
+                                        className={`rounded-lg border-2 border-dashed p-6 text-center transition-colors ${isDragOver ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-300 dark:border-gray-600'
+                                            }`}
+                                        onDrop={handleDrop}
+                                        onDragOver={handleDragOver}
+                                        onDragLeave={handleDragLeave}
+                                    >
+                                        <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                                        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Drag and drop a file here, or click to select</p>
+                                        <input
+                                            type="file"
+                                            accept="audio/*,video/*"
+                                            onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
+                                            className="hidden"
+                                            id="file-upload"
+                                        />
+                                        <Label htmlFor="file-upload" className="cursor-pointer text-sm text-blue-600 hover:text-blue-500">
+                                            Browse Files
+                                        </Label>
+                                    </div>
+                                    {errors.file && <p className="mt-1 text-sm text-red-600">{errors.file}</p>}
+                                </div>
+                            ) : (
+                                <div>
+                                    <Label htmlFor="url">Media URL</Label>
+                                    <Input
+                                        id="url"
+                                        type="url"
+                                        value={data.url}
+                                        onChange={(e) => handleUrlChange(e.target.value)}
+                                        placeholder="https://example.com/audio.mp3"
+                                        required
+                                    />
+                                    {errors.url && <p className="mt-1 text-sm text-red-600">{errors.url}</p>}
+                                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Enter a direct link to an audio or video file</p>
+                                </div>
+                            )}
 
                             {selectedFile && (
                                 <div className="text-sm text-gray-600 dark:text-gray-400">
                                     Selected: {selectedFile.name} ({formatFileSize(selectedFile.size)})
                                 </div>
                             )}
+
+                            {data.url && inputType === 'url' && <div className="text-sm text-gray-600 dark:text-gray-400">URL: {data.url}</div>}
 
                             <div>
                                 <Label htmlFor="title">Title</Label>
@@ -192,8 +264,8 @@ export default function DashboardLibraryUpload({ libraryItems, onUploadSuccess }
                                 >
                                     Cancel
                                 </Button>
-                                <Button type="submit" disabled={processing || !selectedFile}>
-                                    {processing ? 'Uploading...' : 'Upload'}
+                                <Button type="submit" disabled={processing || (!selectedFile && !data.url)}>
+                                    {processing ? 'Processing...' : inputType === 'file' ? 'Upload' : 'Add'}
                                 </Button>
                             </div>
                         </form>
