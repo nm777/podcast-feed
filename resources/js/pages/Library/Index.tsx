@@ -128,14 +128,19 @@ export default function LibraryIndex({ libraryItems, flash }: LibraryIndexProps)
                         {libraryItems.map((item) => (
                             <Card
                                 key={item.id}
-                                className={`relative ${item.is_duplicate ? 'border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-900/10' : ''}`}
+                                className={`relative overflow-hidden ${item.is_duplicate ? 'border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-900/10' : ''}`}
                             >
                                 <CardHeader className="pb-3">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-center gap-3">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="flex min-w-0 flex-1 items-center gap-3">
                                             {getFileIcon(item.media_file?.mime_type)}
                                             <div className="min-w-0 flex-1">
-                                                <CardTitle className="truncate text-lg">{item.title}</CardTitle>
+                                                <CardTitle
+                                                    className="truncate text-lg leading-tight transition-colors hover:text-foreground/80"
+                                                    title={item.title}
+                                                >
+                                                    {item.title}
+                                                </CardTitle>
                                                 <CardDescription className="text-xs">
                                                     {new Date(item.created_at).toLocaleDateString()}
                                                 </CardDescription>
@@ -157,9 +162,11 @@ export default function LibraryIndex({ libraryItems, flash }: LibraryIndexProps)
                                         </div>
                                     )}
                                 </CardHeader>
-                                <CardContent>
+                                <CardContent className="overflow-hidden">
                                     {item.description && (
-                                        <p className="mb-3 line-clamp-2 text-sm text-gray-600 dark:text-gray-400">{item.description}</p>
+                                        <p className="mb-3 line-clamp-2 overflow-hidden text-sm text-gray-600 dark:text-gray-400">
+                                            {item.description}
+                                        </p>
                                     )}
                                     {item.media_file && (
                                         <div className="text-xs text-gray-500 dark:text-gray-400">
