@@ -1,61 +1,184 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Podcast Feed
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A Laravel-based podcast feed management application with React frontend.
 
-## About Laravel
+## Features
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- Podcast feed management
+- Media file processing
+- Library organization
+- User authentication
+- Modern React frontend with Inertia.js
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Docker Setup
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+This application includes Docker support for easy development and deployment.
 
-## Learning Laravel
+### Prerequisites
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+- Docker and Docker Compose installed on your system
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+### Quick Start
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+The easiest way to get started is using the build script:
 
-## Laravel Sponsors
+```bash
+./build.sh dev
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+This will:
+- Build and start all containers
+- Create the environment file if needed
+- Set up the development environment
 
-### Premium Partners
+Then run migrations:
+```bash
+./build.sh migrate
+```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+Access the application at `http://localhost:8000`
 
-## Contributing
+### Manual Setup
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+If you prefer to set up manually:
 
-## Code of Conduct
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd podcast-feed
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+2. Copy the environment file:
+```bash
+cp src/.env.example src/.env
+```
 
-## Security Vulnerabilities
+3. Update the database configuration in `src/.env`:
+```env
+DB_CONNECTION=mysql
+DB_HOST=database
+DB_PORT=3306
+DB_DATABASE=podcast_feed
+DB_USERNAME=podcast_user
+DB_PASSWORD=secret
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+4. Build and start the containers:
+```bash
+docker-compose up -d --build
+```
+
+5. Run the database migrations:
+```bash
+docker-compose exec app php artisan migrate
+```
+
+6. Install and build frontend assets:
+```bash
+docker-compose exec app npm install
+docker-compose exec app npm run build
+```
+
+7. Access the application at `http://localhost:8000`
+
+### Development Commands
+
+Using the build script (recommended):
+- Start development: `./build.sh dev`
+- Stop services: `./build.sh stop`
+- View logs: `./build.sh logs -f`
+- Run migrations: `./build.sh migrate`
+- Run tests: `./build.sh test`
+- Access shell: `./build.sh shell`
+- Build production image: `./build.sh prod`
+- Clean everything: `./build.sh clean`
+
+Manual Docker commands:
+- Start all services: `docker-compose up -d`
+- Stop all services: `docker-compose down`
+- View logs: `docker-compose logs -f`
+- Run artisan commands: `docker-compose exec app php artisan <command>`
+- Access container shell: `docker-compose exec app sh`
+
+### Services
+
+The Docker setup includes:
+
+- **app**: PHP-FPM service with Laravel application
+- **webserver**: Nginx web server (port 8000)
+- **database**: MySQL 8.0 database (port 3306)
+- **redis**: Redis cache service (port 6379)
+
+### Production Deployment
+
+For production deployment, use the build script to create an optimized production image:
+
+```bash
+./build.sh prod
+```
+
+This creates a multi-stage build with:
+- Optimized frontend assets
+- Production PHP configuration
+- Cached Laravel configurations
+- Minimal image size
+
+Then run with your preferred orchestration method, ensuring you set the appropriate environment variables.
+
+Example production run:
+```bash
+docker run -d \
+  --name podcast-feed \
+  -p 9000:9000 \
+  -e APP_ENV=production \
+  -e DB_CONNECTION=mysql \
+  -e DB_HOST=your-db-host \
+  -e DB_DATABASE=your-db \
+  -e DB_USERNAME=your-user \
+  -e DB_PASSWORD=your-password \
+  podcast-feed:prod
+```
+
+## Local Development (Without Docker)
+
+If you prefer to develop locally:
+
+1. Install PHP 8.2+, Node.js, and Composer
+2. Clone the repository and navigate to the `src/` directory
+3. Install dependencies:
+   ```bash
+   composer install
+   npm install
+   ```
+4. Set up environment:
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
+5. Run migrations:
+   ```bash
+   php artisan migrate
+   ```
+6. Start development servers:
+   ```bash
+   composer run dev
+   ```
+
+## Testing
+
+Run tests using Docker:
+
+```bash
+docker-compose exec app php artisan test
+```
+
+Or locally:
+
+```bash
+cd src
+php artisan test
+```
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+This project is open-sourced software licensed under the MIT license.
