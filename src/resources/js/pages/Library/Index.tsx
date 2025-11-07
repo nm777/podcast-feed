@@ -1,12 +1,13 @@
 import DeleteConfirmDialog from '@/components/delete-confirm-dialog';
+import MediaPlayer from '@/components/media-player';
 import MediaUploadButton from '@/components/media-upload-button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, useForm } from '@inertiajs/react';
-import { AlertCircle, FileAudio, FileVideo, Trash2 } from 'lucide-react';
+import { AlertCircle, FileAudio, FileVideo, Play, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 interface MediaFile {
@@ -16,6 +17,7 @@ interface MediaFile {
     mime_type: string;
     filesize: number;
     duration?: number;
+    public_url?: string;
     created_at: string;
     updated_at: string;
 }
@@ -57,6 +59,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 export default function LibraryIndex({ libraryItems, flash }: LibraryIndexProps) {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<number | null>(null);
+    const [playingItem, setPlayingItem] = useState<LibraryItem | null>(null);
     const { delete: destroyForm } = useForm();
 
     // Auto-refresh for processing items using custom polling
@@ -152,12 +155,14 @@ export default function LibraryIndex({ libraryItems, flash }: LibraryIndexProps)
                                         <div className="flex min-w-0 flex-1 items-center gap-3">
                                             {getFileIcon(item.media_file?.mime_type)}
                                             <div className="min-w-0 flex-1">
-                                                <CardTitle
-                                                    className="truncate text-lg leading-tight transition-colors hover:text-foreground/80"
+                                                <button
+                                                    onClick={() => setPlayingItem(item)}
+                                                    className="flex w-full cursor-pointer items-center gap-2 truncate border-0 bg-transparent text-left text-lg leading-tight font-medium transition-colors hover:text-foreground/80"
                                                     title={item.title}
                                                 >
+                                                    <Play className="h-4 w-4" />
                                                     {item.title}
-                                                </CardTitle>
+                                                </button>
                                                 <CardDescription className="text-xs">
                                                     {new Date(item.created_at).toLocaleDateString()}
                                                 </CardDescription>
@@ -203,6 +208,20 @@ export default function LibraryIndex({ libraryItems, flash }: LibraryIndexProps)
                     </div>
                 )}
             </div>
+
+            <DeleteConfirmDialog
+                isOpen={deleteDialogOpen}
+                onClose={() => setDeleteDialogOpen(false)}
+                onConfirm={handleDeleteConfirm}
+                title="Delete Media Item"
+                description="Are you sure you want to remove this item from your library? This action cannot be undone."
+                confirmText="Delete"
+                cancelText="Cancel"
+                variant="destructive"
+            />
+
+            {/* Media Player Modal */}
+            {playingItem && <MediaPlayer libraryItem={playingItem} isOpen={true} onClose={() => setPlayingItem(null)} />}
 
             <DeleteConfirmDialog
                 isOpen={deleteDialogOpen}

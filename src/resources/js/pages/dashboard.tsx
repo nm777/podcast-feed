@@ -36,6 +36,7 @@ interface MediaFile {
     mime_type: string;
     filesize: number;
     duration?: number;
+    public_url?: string;
     created_at: string;
     updated_at: string;
 }
