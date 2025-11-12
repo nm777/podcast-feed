@@ -20,7 +20,10 @@ Route::post('check-url-duplicate', [App\Http\Controllers\Api\UrlDuplicateCheckCo
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
-        $feeds = Auth::user()->feeds()->latest()->get();
+        $feeds = Auth::user()->feeds()
+            ->withCount('items')
+            ->latest()
+            ->get();
         $libraryItems = Auth::user()->libraryItems()
             ->with('mediaFile')
             ->latest()

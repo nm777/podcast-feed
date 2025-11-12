@@ -9,9 +9,11 @@ import { useCallback, useState } from 'react';
 
 interface MediaUploadButtonProps {
     onUploadSuccess?: () => void;
+    variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+    size?: 'default' | 'sm' | 'lg' | 'icon';
 }
 
-export default function MediaUploadButton({ onUploadSuccess }: MediaUploadButtonProps) {
+export default function MediaUploadButton({ onUploadSuccess, variant = 'default', size = 'default' }: MediaUploadButtonProps) {
     const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
     const [isDragOver, setIsDragOver] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -231,7 +233,7 @@ export default function MediaUploadButton({ onUploadSuccess }: MediaUploadButton
     return (
         <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
             <DialogTrigger asChild>
-                <Button>
+                <Button variant={variant} size={size}>
                     <Plus className="mr-2 h-4 w-4" />
                     Add Media
                 </Button>

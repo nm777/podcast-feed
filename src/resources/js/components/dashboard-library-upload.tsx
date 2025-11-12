@@ -111,13 +111,14 @@ export default function DashboardLibraryUpload({ libraryItems, onUploadSuccess }
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold">Library Items</h2>
-                <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
-                    <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                    Refresh
-                </Button>
+                <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-semibold">Library Items</h2>
+                    <Button variant="ghost" size="icon" onClick={handleRefresh} disabled={isRefreshing}>
+                        <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                    </Button>
+                </div>
+                <MediaUploadButton onUploadSuccess={onUploadSuccess} variant="default" size="sm" />
             </div>
-            <MediaUploadButton onUploadSuccess={onUploadSuccess} />
 
             {recentItems.length === 0 ? (
                 <Card className="flex items-center justify-center p-8">

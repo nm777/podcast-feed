@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { router } from '@inertiajs/react';
-import { Copy, Edit, Eye, EyeOff, Rss, Trash2 } from 'lucide-react';
+import { Copy, Edit, Eye, EyeOff, FileAudio, Rss, Trash2 } from 'lucide-react';
 
 interface Feed {
     id: number;
@@ -13,6 +13,7 @@ interface Feed {
     slug: string;
     user_guid: string;
     token?: string;
+    items_count: number;
     created_at: string;
     updated_at: string;
 }
@@ -106,16 +107,16 @@ export default function FeedList({ feeds, canEdit = true }: FeedListProps) {
     }
 
     return (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {feeds.map((feed) => (
-                <Card key={feed.id}>
+                <Card key={feed.id} className="min-w-0">
                     <CardHeader className="pb-3">
                         <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                                <CardTitle className="text-lg">{feed.title}</CardTitle>
+                            <div className="min-w-0 flex-1">
+                                <CardTitle className="truncate text-lg">{feed.title}</CardTitle>
                                 <CardDescription className="mt-1 line-clamp-2">{feed.description || 'No description provided'}</CardDescription>
                             </div>
-                            <div className="ml-4 flex items-center gap-2">
+                            <div className="ml-2 flex flex-shrink-0 items-center gap-2">
                                 <Badge variant={feed.is_public ? 'default' : 'secondary'}>
                                     {feed.is_public ? (
                                         <>
@@ -129,12 +130,16 @@ export default function FeedList({ feeds, canEdit = true }: FeedListProps) {
                                         </>
                                     )}
                                 </Badge>
+                                <Badge variant="outline">
+                                    <FileAudio className="mr-1 h-3 w-3" />
+                                    {feed.items_count}
+                                </Badge>
                             </div>
                         </div>
                     </CardHeader>
                     <CardContent className="pt-0">
                         <div className="space-y-3">
-                            <div className="text-sm text-muted-foreground">
+                            <div className="text-sm break-all text-muted-foreground">
                                 <a href={getFeedUrl(feed)} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
                                     {getFeedUrl(feed)}
                                 </a>
