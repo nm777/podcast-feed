@@ -182,6 +182,15 @@ it('correctly sets is_duplicate flag for true duplicate file uploads', function 
         'file_path' => 'media/'.$fileHash.'.mp3',
     ]);
 
+    // Create a library item that references this media file
+    LibraryItem::factory()->create([
+        'user_id' => $user->id,
+        'media_file_id' => $existingMediaFile->id,
+        'title' => 'Original File',
+        'source_type' => 'upload',
+        'processing_status' => \App\ProcessingStatusType::COMPLETED,
+    ]);
+
     // Now upload the same file content again
     $uploadedFile = UploadedFile::fake()->createWithContent('test.mp3', $fileContent);
 

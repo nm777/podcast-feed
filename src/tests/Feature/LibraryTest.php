@@ -548,6 +548,15 @@ it('detects duplicate file uploads by hash', function () {
         'file_path' => 'media/existing-file.mp3',
     ]);
 
+    // Create a library item that references this media file
+    LibraryItem::factory()->create([
+        'user_id' => $user->id,
+        'media_file_id' => $mediaFile->id,
+        'title' => 'Original File',
+        'source_type' => 'upload',
+        'processing_status' => \App\ProcessingStatusType::COMPLETED,
+    ]);
+
     // Create actual file in storage so duplicate detection works
     Storage::disk('public')->put($mediaFile->file_path, 'test audio content');
 
@@ -673,6 +682,15 @@ it('marks duplicate library items and schedules cleanup', function () {
         'user_id' => $user->id,
         'file_hash' => hash('sha256', 'duplicate content'),
         'file_path' => 'media/existing-file.mp3',
+    ]);
+
+    // Create existing library item that references the media file
+    LibraryItem::factory()->create([
+        'user_id' => $user->id,
+        'media_file_id' => $mediaFile->id,
+        'title' => 'Original File',
+        'source_type' => 'upload',
+        'processing_status' => \App\ProcessingStatusType::COMPLETED,
     ]);
 
     // Create library item for duplicate upload
