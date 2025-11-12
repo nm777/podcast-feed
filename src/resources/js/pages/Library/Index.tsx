@@ -226,17 +226,6 @@ export default function LibraryIndex({ libraryItems, flash }: LibraryIndexProps)
 
             {/* Media Player Modal */}
             {playingItem && <MediaPlayer libraryItem={playingItem} isOpen={true} onClose={() => setPlayingItem(null)} />}
-
-            <DeleteConfirmDialog
-                isOpen={deleteDialogOpen}
-                onClose={() => setDeleteDialogOpen(false)}
-                onConfirm={handleDeleteConfirm}
-                title="Delete Media Item"
-                description="Are you sure you want to remove this item from your library? This action cannot be undone."
-                confirmText="Delete"
-                cancelText="Cancel"
-                variant="destructive"
-            />
         </AppLayout>
     );
 }
