@@ -7,8 +7,8 @@ use App\Jobs\CleanupDuplicateLibraryItem;
 use App\Jobs\ProcessMediaFile;
 use App\Jobs\ProcessYouTubeAudio;
 use App\Models\LibraryItem;
-use App\Models\MediaFile;
 use App\ProcessingStatusType;
+use App\Services\DuplicateDetectionService;
 use App\Services\YouTubeUrlValidator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -103,16 +103,16 @@ class LibraryController extends Controller
         $file = $request->file('file');
         $tempPath = $file->store('temp-uploads', 'public');
 
-        // Check for duplicate by file hash for this user
-        $existingMediaFile = MediaFile::isDuplicateForUser($tempPath, Auth::user()->id);
+        // Analyze file for duplicates using centralized service
+        $duplicateAnalysis = DuplicateDetectionService::analyzeFileUpload($tempPath, Auth::user()->id);
 
-        if ($existingMediaFile) {
+        if ($duplicateAnalysis['should_link_to_user_duplicate']) {
             // Clean up temp file
             Storage::disk('public')->delete($tempPath);
 
             // Create library item with duplicate flag
             $libraryItem = $this->createLibraryItem($validated, $sourceType, $sourceUrl, [
-                'media_file_id' => $existingMediaFile->id,
+                'media_file_id' => $duplicateAnalysis['user_duplicate_media_file']->id,
                 'is_duplicate' => true,
                 'duplicate_detected_at' => now(),
                 'processing_status' => ProcessingStatusType::COMPLETED,
@@ -146,30 +146,27 @@ class LibraryController extends Controller
     {
         $mediaFileId = null;
         $message = '';
-        $existingLibraryItem = null;
 
-        // Check if URL already exists in our system
-        if ($sourceUrl) {
-            $existingLibraryItem = LibraryItem::findBySourceUrlForUser($sourceUrl, Auth::user()->id);
-            $existingMediaFile = MediaFile::findBySourceUrl($sourceUrl);
+        // Analyze URL for duplicates using centralized service
+        $duplicateAnalysis = DuplicateDetectionService::analyzeUrlSource($sourceUrl, Auth::user()->id);
 
-            if ($existingLibraryItem) {
-                // User already has this URL in their library - true duplicate
-                $mediaFileId = $existingLibraryItem->media_file_id;
-                $message = 'Duplicate URL detected. This file already exists in your library and will be removed automatically in 5 minutes.';
-            } elseif ($existingMediaFile && $existingMediaFile->user_id === Auth::user()->id) {
-                // User has a media file with this URL but no library item (edge case)
-                $mediaFileId = $existingMediaFile->id;
-                $message = 'Duplicate URL detected. This file already exists in your library and will be removed automatically in 5 minutes.';
-            }
-            // For cross-user scenarios, we don't link to existing media files
-            // Each user gets their own media file even for same URLs
+        if ($duplicateAnalysis['should_link_to_user_duplicate']) {
+            // User already has this URL in their library - true duplicate
+            $mediaFileId = $duplicateAnalysis['user_duplicate_library_item']->media_file_id;
+            $message = 'Duplicate URL detected. This file already exists in your library and will be removed automatically in 5 minutes.';
+        } elseif ($duplicateAnalysis['should_link_to_user_media_file']) {
+            // User has a media file with this URL but no library item (edge case)
+            $mediaFileId = $duplicateAnalysis['global_duplicate_media_file']->id;
+            $message = 'Duplicate URL detected. This file already exists in your library and will be removed automatically in 5 minutes.';
         }
+        // For cross-user scenarios, we don't link to existing media files in LibraryController
+        // Each user gets their own media file even for same URLs
+        // Cross-user linking is handled in ProcessMediaFile job
 
         $libraryItem = $this->createLibraryItem($validated, $sourceType, $sourceUrl, [
             'media_file_id' => $mediaFileId,
-            'is_duplicate' => $existingLibraryItem ? true : false, // Only mark as duplicate if same user has URL
-            'duplicate_detected_at' => $existingLibraryItem ? now() : null,
+            'is_duplicate' => $duplicateAnalysis['is_user_duplicate'],
+            'duplicate_detected_at' => $duplicateAnalysis['is_user_duplicate'] ? now() : null,
             'processing_status' => $mediaFileId ? ProcessingStatusType::COMPLETED : ProcessingStatusType::PENDING,
             'processing_completed_at' => $mediaFileId ? now() : null,
         ]);
@@ -179,7 +176,7 @@ class LibraryController extends Controller
             $message = $message ?: 'Media file already exists. Added to your library.';
 
             // Schedule cleanup for duplicate URL entries
-            if ($sourceUrl) {
+            if ($sourceUrl && ($duplicateAnalysis['is_user_duplicate'] || $duplicateAnalysis['user_media_file_only'])) {
                 CleanupDuplicateLibraryItem::dispatch($libraryItem)->delay(now()->addMinutes(5));
             }
         } elseif ($sourceType === 'url') {

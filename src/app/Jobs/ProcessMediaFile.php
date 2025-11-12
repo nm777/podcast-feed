@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\LibraryItem;
 use App\Models\MediaFile;
 use App\ProcessingStatusType;
+use App\Services\DuplicateDetectionService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -53,13 +54,15 @@ class ProcessMediaFile implements ShouldQueue
         try {
             // Check if user already has this URL in their library (excluding current item)
             if ($this->sourceUrl) {
-                $existingLibraryItem = LibraryItem::findBySourceUrlForUser($this->sourceUrl, $this->libraryItem->user_id);
-                $existingMediaFile = MediaFile::findBySourceUrl($this->sourceUrl);
+                $duplicateAnalysis = DuplicateDetectionService::analyzeUrlSource(
+                    $this->sourceUrl,
+                    $this->libraryItem->user_id,
+                    $this->libraryItem->id
+                );
 
-                // Exclude the current library item from the duplicate check
-                if ($existingLibraryItem && $existingLibraryItem->id !== $this->libraryItem->id) {
+                if ($duplicateAnalysis['should_link_to_user_duplicate']) {
                     // User already has this URL, link to existing media file and mark as completed
-                    $this->libraryItem->media_file_id = $existingLibraryItem->media_file_id;
+                    $this->libraryItem->media_file_id = $duplicateAnalysis['user_duplicate_library_item']->media_file_id;
                     $this->libraryItem->update([
                         'processing_status' => ProcessingStatusType::COMPLETED,
                         'processing_completed_at' => now(),
@@ -68,18 +71,17 @@ class ProcessMediaFile implements ShouldQueue
                     return;
                 }
 
-                // Check for cross-user sharing
-                if ($existingMediaFile && $existingMediaFile->user_id !== $this->libraryItem->user_id) {
+                if ($duplicateAnalysis['should_link_to_global_duplicate']) {
                     Log::info('Found existing media file from different user for URL', [
                         'library_item_id' => $this->libraryItem->id,
-                        'existing_media_file_id' => $existingMediaFile->id,
-                        'existing_user_id' => $existingMediaFile->user_id,
+                        'existing_media_file_id' => $duplicateAnalysis['global_duplicate_media_file']->id,
+                        'existing_user_id' => $duplicateAnalysis['global_duplicate_media_file']->user_id,
                         'current_user_id' => $this->libraryItem->user_id,
                         'source_url' => $this->sourceUrl,
                     ]);
 
                     // Link to existing media file from different user (cross-user sharing)
-                    $this->libraryItem->media_file_id = $existingMediaFile->id;
+                    $this->libraryItem->media_file_id = $duplicateAnalysis['global_duplicate_media_file']->id;
                     $this->libraryItem->update([
                         'processing_status' => ProcessingStatusType::COMPLETED,
                         'processing_completed_at' => now(),
@@ -235,60 +237,23 @@ class ProcessMediaFile implements ShouldQueue
             $extension = pathinfo($fullPath, PATHINFO_EXTENSION);
             $finalPath = 'media/'.$fileHash.'.'.$extension;
 
-            // Check if file already exists with this hash for this user
-            $existingLibraryItem = LibraryItem::findByHashForUser($fileHash, $this->libraryItem->user_id);
-            $mediaFile = $existingLibraryItem?->mediaFile;
+            // Analyze file for duplicates using centralized service
+            $duplicateAnalysis = DuplicateDetectionService::analyzeFileUpload($tempPath, $this->libraryItem->user_id);
+            $mediaFile = null;
 
-            if (! $mediaFile) {
-                // Check if file exists for any user (global deduplication)
-                $globalMediaFile = MediaFile::findByHash($fileHash);
-
-                if ($globalMediaFile) {
-                    // File exists globally but not for this user, link to existing file
-                    Storage::disk('public')->delete($tempPath);
-
-                    $this->libraryItem->media_file_id = $globalMediaFile->id;
-                    // Don't mark as duplicate since this is a different user's file
-                    $this->libraryItem->update([
-                        'processing_status' => ProcessingStatusType::COMPLETED,
-                        'processing_completed_at' => now(),
-                    ]);
-
-                    // Store flash message for user notification
-                    session()->flash('info', 'File already exists in the system. Linked to existing media file.');
-
-                    return;
-                }
-
-                // Move file to final location using hash
-                Storage::disk('public')->move($tempPath, $finalPath);
-
-                $mediaFile = MediaFile::create([
-                    'user_id' => $this->libraryItem->user_id,
-                    'file_path' => $finalPath,
-                    'file_hash' => $fileHash,
-                    'mime_type' => File::mimeType(Storage::disk('public')->path($finalPath)),
-                    'filesize' => File::size(Storage::disk('public')->path($finalPath)),
-                    'source_url' => $this->sourceUrl,
-                ]);
-
-                $this->libraryItem->media_file_id = $mediaFile->id;
-                $this->libraryItem->update([
-                    'processing_status' => ProcessingStatusType::COMPLETED,
-                    'processing_completed_at' => now(),
-                ]);
-            } else {
+            if ($duplicateAnalysis['should_link_to_user_duplicate']) {
                 // File already exists for this user, clean up temp file
                 Storage::disk('public')->delete($tempPath);
 
                 // Update source URL if this is first time we've seen it from a URL
-                if ($this->sourceUrl && ! $mediaFile->source_url) {
-                    $mediaFile->source_url = $this->sourceUrl;
-                    $mediaFile->save();
+                $userDuplicateMediaFile = $duplicateAnalysis['user_duplicate_media_file'];
+                if ($this->sourceUrl && ! $userDuplicateMediaFile->source_url) {
+                    $userDuplicateMediaFile->source_url = $this->sourceUrl;
+                    $userDuplicateMediaFile->save();
                 }
 
                 // Mark this library item as a duplicate
-                $this->libraryItem->media_file_id = $mediaFile->id;
+                $this->libraryItem->media_file_id = $userDuplicateMediaFile->id;
                 $this->libraryItem->is_duplicate = true;
                 $this->libraryItem->duplicate_detected_at = now();
                 $this->libraryItem->update([
@@ -301,6 +266,40 @@ class ProcessMediaFile implements ShouldQueue
 
                 // Store flash message for user notification
                 session()->flash('warning', 'Duplicate file detected. This file already exists in your library and will be removed automatically in 5 minutes.');
+
+            } elseif ($duplicateAnalysis['should_link_to_global_duplicate']) {
+                // File exists globally but not for this user, link to existing file
+                Storage::disk('public')->delete($tempPath);
+
+                $globalDuplicateMediaFile = $duplicateAnalysis['global_duplicate_media_file'];
+                $this->libraryItem->media_file_id = $globalDuplicateMediaFile->id;
+                // Don't mark as duplicate since this is a different user's file
+                $this->libraryItem->update([
+                    'processing_status' => ProcessingStatusType::COMPLETED,
+                    'processing_completed_at' => now(),
+                ]);
+
+                // Store flash message for user notification
+                session()->flash('info', 'File already exists in the system. Linked to existing media file.');
+
+            } else {
+                // Move file to final location using hash
+                Storage::disk('public')->move($tempPath, $finalPath);
+
+                $mediaFile = MediaFile::create([
+                    'user_id' => $this->libraryItem->user_id,
+                    'file_path' => $finalPath,
+                    'file_hash' => $duplicateAnalysis['file_hash'],
+                    'mime_type' => File::mimeType(Storage::disk('public')->path($finalPath)),
+                    'filesize' => File::size(Storage::disk('public')->path($finalPath)),
+                    'source_url' => $this->sourceUrl,
+                ]);
+
+                $this->libraryItem->media_file_id = $mediaFile->id;
+                $this->libraryItem->update([
+                    'processing_status' => ProcessingStatusType::COMPLETED,
+                    'processing_completed_at' => now(),
+                ]);
             }
 
         } catch (\Exception $e) {

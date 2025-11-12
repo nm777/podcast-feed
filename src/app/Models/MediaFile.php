@@ -58,27 +58,7 @@ class MediaFile extends Model
      */
     public static function isDuplicate(string $filePath): ?static
     {
-        // Try to get file content from storage first
-        try {
-            $content = Storage::disk('public')->get($filePath);
-            if ($content === false) {
-                // Fallback to real file system if storage doesn't have it
-                if (! file_exists($filePath)) {
-                    return null;
-                }
-                $fileHash = hash_file('sha256', $filePath);
-            } else {
-                $fileHash = hash('sha256', $content);
-            }
-        } catch (\Exception $e) {
-            // Fallback to real file system
-            if (! file_exists($filePath)) {
-                return null;
-            }
-            $fileHash = hash_file('sha256', $filePath);
-        }
-
-        return static::findByHash($fileHash);
+        return \App\Services\DuplicateDetectionService::findGlobalDuplicate($filePath);
     }
 
     /**
@@ -86,26 +66,6 @@ class MediaFile extends Model
      */
     public static function isDuplicateForUser(string $filePath, int $userId): ?static
     {
-        // Try to get file content from storage first
-        try {
-            $content = Storage::disk('public')->get($filePath);
-            if ($content === false) {
-                // Fallback to real file system if storage doesn't have it
-                if (! file_exists($filePath)) {
-                    return null;
-                }
-                $fileHash = hash_file('sha256', $filePath);
-            } else {
-                $fileHash = hash('sha256', $content);
-            }
-        } catch (\Exception $e) {
-            // Fallback to real file system
-            if (! file_exists($filePath)) {
-                return null;
-            }
-            $fileHash = hash_file('sha256', $filePath);
-        }
-
-        return LibraryItem::findByHashForUser($fileHash, $userId)?->mediaFile;
+        return \App\Services\DuplicateDetectionService::findUserDuplicate($filePath, $userId);
     }
 }
