@@ -4,12 +4,17 @@ namespace App\Services\YouTube;
 
 use App\Models\LibraryItem;
 use App\Models\MediaFile;
+use App\Services\MediaProcessing\UnifiedDuplicateProcessor;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class YouTubeFileProcessor
 {
+    public function __construct(
+        private UnifiedDuplicateProcessor $duplicateProcessor,
+    ) {}
+
     /**
      * Process downloaded YouTube file and create MediaFile record.
      */
@@ -29,7 +34,7 @@ class YouTubeFileProcessor
         ]);
 
         // Check for duplicates
-        $duplicateResult = $this->handleDuplicates($fileHash, $libraryItem);
+        $duplicateResult = $this->duplicateProcessor->processFileDuplicate($libraryItem, $downloadedFile);
 
         if ($duplicateResult['is_duplicate']) {
             // Clean up temp file
@@ -74,39 +79,6 @@ class YouTubeFileProcessor
             'media_file' => $mediaFile,
             'message' => 'YouTube video processed successfully.',
         ];
-    }
-
-    /**
-     * Handle duplicate detection for YouTube files.
-     */
-    private function handleDuplicates(string $fileHash, LibraryItem $libraryItem): array
-    {
-        // Check if file already exists with this hash for this user
-        $existingLibraryItem = LibraryItem::findByHashForUser($fileHash, $libraryItem->user_id);
-        $mediaFile = $existingLibraryItem?->mediaFile;
-
-        if ($mediaFile) {
-            // File already exists for this user, clean up temp file
-            return [
-                'is_duplicate' => true,
-                'media_file' => $mediaFile,
-                'message' => 'Duplicate file detected. This file already exists in your library and will be removed automatically in 5 minutes.',
-            ];
-        }
-
-        // Check if file exists for any user (global deduplication)
-        $globalMediaFile = MediaFile::findByHash($fileHash);
-
-        if ($globalMediaFile) {
-            // File exists globally but not for this user, link to existing file
-            return [
-                'is_duplicate' => false,
-                'media_file' => $globalMediaFile,
-                'message' => 'File already exists in system. Linked to existing media file.',
-            ];
-        }
-
-        return ['is_duplicate' => false, 'media_file' => null];
     }
 
     /**

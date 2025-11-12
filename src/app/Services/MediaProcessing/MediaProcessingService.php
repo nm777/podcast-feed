@@ -13,7 +13,7 @@ class MediaProcessingService
         private MediaDownloader $downloader,
         private MediaValidator $validator,
         private MediaStorageManager $storageManager,
-        private DuplicateHandler $duplicateHandler
+        private UnifiedDuplicateProcessor $duplicateProcessor
     ) {}
 
     /**
@@ -26,7 +26,7 @@ class MediaProcessingService
             $this->markAsProcessing($libraryItem);
 
             // Check for URL duplicates first
-            $duplicateResult = $this->duplicateHandler->handleUrlDuplicate($libraryItem, $sourceUrl);
+            $duplicateResult = $this->duplicateProcessor->processUrlDuplicate($libraryItem, $sourceUrl);
             if ($duplicateResult['media_file']) {
                 return $duplicateResult;
             }
@@ -63,7 +63,7 @@ class MediaProcessingService
             }
 
             // Check for duplicates
-            $duplicateResult = $this->duplicateHandler->handleFileDuplicate($libraryItem, $filePath);
+            $duplicateResult = $this->duplicateProcessor->processFileDuplicate($libraryItem, $filePath);
             if ($duplicateResult['media_file']) {
                 return $duplicateResult;
             }

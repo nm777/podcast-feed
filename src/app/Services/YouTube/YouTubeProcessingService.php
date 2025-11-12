@@ -2,10 +2,9 @@
 
 namespace App\Services\YouTube;
 
-use App\Jobs\CleanupDuplicateLibraryItem;
 use App\Models\LibraryItem;
-use App\Models\MediaFile;
 use App\ProcessingStatusType;
+use App\Services\MediaProcessing\UnifiedDuplicateProcessor;
 use App\Services\YouTubeUrlValidator;
 use Illuminate\Support\Facades\Log;
 
@@ -15,6 +14,7 @@ class YouTubeProcessingService
         private YouTubeDownloader $downloader,
         private YouTubeMetadataExtractor $metadataExtractor,
         private YouTubeFileProcessor $fileProcessor,
+        private UnifiedDuplicateProcessor $duplicateProcessor,
     ) {}
 
     /**
@@ -53,79 +53,13 @@ class YouTubeProcessingService
         ]);
 
         // Check for duplicates first
-        $duplicateResult = $this->handleDuplicates($youtubeUrl, $libraryItem);
+        $duplicateResult = $this->duplicateProcessor->processUrlDuplicate($libraryItem, $youtubeUrl);
         if ($duplicateResult['is_duplicate']) {
             return $duplicateResult;
         }
 
         // Download and process the video
         return $this->downloadAndProcess($libraryItem, $youtubeUrl);
-    }
-
-    /**
-     * Handle duplicate detection for YouTube URLs.
-     */
-    private function handleDuplicates(string $youtubeUrl, LibraryItem $libraryItem): array
-    {
-        // Check if user already has this YouTube URL in their library
-        $existingLibraryItem = LibraryItem::findBySourceUrlForUser($youtubeUrl, $libraryItem->user_id);
-        $existingMediaFile = MediaFile::findBySourceUrl($youtubeUrl);
-
-        if ($existingLibraryItem) {
-            Log::info('Found existing library item for YouTube URL', [
-                'library_item_id' => $libraryItem->id,
-                'existing_library_item_id' => $existingLibraryItem->id,
-                'existing_media_file_id' => $existingLibraryItem->media_file_id,
-                'youtube_url' => $youtubeUrl,
-            ]);
-
-            // User already has this YouTube URL, link to existing media file and mark as duplicate
-            $libraryItem->media_file_id = $existingLibraryItem->media_file_id;
-            $libraryItem->is_duplicate = true;
-            $libraryItem->duplicate_detected_at = now();
-            $libraryItem->update([
-                'processing_status' => ProcessingStatusType::COMPLETED,
-                'processing_completed_at' => now(),
-            ]);
-
-            // Schedule cleanup of this duplicate entry
-            CleanupDuplicateLibraryItem::dispatch($libraryItem)->delay(now()->addMinutes(5));
-
-            // Store flash message for user notification
-            session()->flash('warning', 'Duplicate file detected. This file already exists in your library and will be removed automatically in 5 minutes.');
-
-            return [
-                'success' => true,
-                'is_duplicate' => true,
-                'message' => 'Duplicate file detected. This file already exists in your library and will be removed automatically in 5 minutes.',
-            ];
-        }
-
-        // Check for cross-user sharing
-        if ($existingMediaFile && $existingMediaFile->user_id !== $libraryItem->user_id) {
-            Log::info('Found existing media file from different user for YouTube URL', [
-                'library_item_id' => $libraryItem->id,
-                'existing_media_file_id' => $existingMediaFile->id,
-                'existing_user_id' => $existingMediaFile->user_id,
-                'current_user_id' => $libraryItem->user_id,
-                'youtube_url' => $youtubeUrl,
-            ]);
-
-            // Link to existing media file from different user (cross-user sharing)
-            $libraryItem->media_file_id = $existingMediaFile->id;
-            $libraryItem->update([
-                'processing_status' => ProcessingStatusType::COMPLETED,
-                'processing_completed_at' => now(),
-            ]);
-
-            return [
-                'success' => true,
-                'is_duplicate' => false,
-                'message' => 'File already exists in system. Linked to existing media file.',
-            ];
-        }
-
-        return ['success' => true, 'is_duplicate' => false];
     }
 
     /**
