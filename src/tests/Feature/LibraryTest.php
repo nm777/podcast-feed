@@ -400,6 +400,12 @@ it('reuses existing media file when same URL is provided', function () {
         'user_id' => $user->id,
         'source_url' => 'https://example.com/shared-audio.mp3',
     ]);
+    $existingLibraryItem = LibraryItem::factory()->create([
+        'user_id' => $user->id,
+        'media_file_id' => $mediaFile->id,
+        'source_type' => 'url',
+        'source_url' => 'https://example.com/shared-audio.mp3',
+    ]);
 
     // First user adds URL
     $response = $this->actingAs($user)->post('/library', [
@@ -408,7 +414,7 @@ it('reuses existing media file when same URL is provided', function () {
     ]);
 
     $response->assertRedirect('/library');
-    $response->assertSessionHas('success', 'Duplicate URL detected. This file already exists in your library and will be removed automatically in 5 minutes.');
+    $response->assertSessionHas('success', 'This URL has already been processed. The existing media file has been linked to this library item.');
 
     $this->assertDatabaseHas('library_items', [
         'user_id' => $user->id,
@@ -417,8 +423,8 @@ it('reuses existing media file when same URL is provided', function () {
         'media_file_id' => $mediaFile->id,
     ]);
 
-    // Should schedule cleanup for duplicate
-    Queue::assertPushed(\App\Jobs\CleanupDuplicateLibraryItem::class);
+    // Should not schedule cleanup - duplicates are now linked immediately
+    Queue::assertNotPushed(\App\Jobs\CleanupDuplicateLibraryItem::class);
 });
 
 it('does not reuse files when URLs are different', function () {
@@ -437,7 +443,7 @@ it('does not reuse files when URLs are different', function () {
     ]);
 
     $response->assertRedirect('/library');
-    $response->assertSessionHas('success', 'Media file URL added successfully. Downloading and processing...');
+    $response->assertSessionHas('success', 'URL added successfully. Processing...');
 
     $this->assertDatabaseHas('library_items', [
         'user_id' => $user->id,
@@ -515,10 +521,10 @@ it('multiple users can reuse same file from same URL', function () {
     ]);
 
     $response2->assertRedirect('/library');
-    $response2->assertSessionHas('success', 'Media file URL added successfully. Downloading and processing...');
+    $response2->assertSessionHas('success', 'This URL has already been processed. The existing media file has been linked to this library item.');
 
-    // A new job should be dispatched since user2 doesn't have this file yet
-    Queue::assertPushed(\App\Jobs\ProcessMediaFile::class);
+    // No new job should be dispatched since we reuse the existing media file
+    Queue::assertNotPushed(\App\Jobs\ProcessMediaFile::class);
 
     // User1 should have library item pointing to their media file
     $this->assertDatabaseHas('library_items', [
@@ -531,8 +537,8 @@ it('multiple users can reuse same file from same URL', function () {
         ->where('title', 'User 2 Copy')
         ->first();
     expect($user2LibraryItem)->not->toBeNull();
-    expect($user2LibraryItem->media_file_id)->not->toBe($mediaFile->id); // Should be different
-    expect($user2LibraryItem->is_duplicate)->toBeFalse(); // Cross-user links are not duplicates
+    expect($user2LibraryItem->media_file_id)->toBe($mediaFile->id); // Should be same - we reuse media files
+    expect($user2LibraryItem->is_duplicate)->toBeTrue(); // Cross-user links are now marked as duplicates
 });
 
 it('detects duplicate file uploads by hash', function () {

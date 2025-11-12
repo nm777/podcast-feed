@@ -234,5 +234,5 @@ it('detects duplicate YouTube URLs correctly', function () {
         ]);
 
     $response->assertRedirect('/library');
-    $response->assertSessionHas('success', 'Duplicate URL detected. This file already exists in your library and will be removed automatically in 5 minutes.');
+    $response->assertSessionHas('success', 'This YouTube video has already been processed. The existing media file has been linked to this library item.');
 });
