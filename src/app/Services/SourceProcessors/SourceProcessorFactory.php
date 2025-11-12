@@ -2,22 +2,22 @@
 
 namespace App\Services\SourceProcessors;
 
+use App\Services\MediaProcessing\UnifiedDuplicateProcessor;
 use App\Services\YouTubeUrlValidator;
-use Illuminate\Database\DatabaseManager;
 
 class SourceProcessorFactory
 {
-    public static function create(string $sourceType): SourceProcessorInterface
+    public static function create(string $sourceType): UnifiedSourceProcessor
     {
-        $db = app(DatabaseManager::class);
-        $duplicateDetection = app(\App\Services\DuplicateDetectionService::class);
-
-        return match ($sourceType) {
-            'upload' => new UploadSourceProcessor($db, $duplicateDetection),
-            'url' => new UrlSourceProcessor($db, $duplicateDetection),
-            'youtube' => new YouTubeSourceProcessor($db, $duplicateDetection),
+        $duplicateProcessor = app(UnifiedDuplicateProcessor::class);
+        $strategy = match ($sourceType) {
+            'upload' => new UploadStrategy,
+            'url' => new UrlStrategy,
+            'youtube' => new YouTubeStrategy,
             default => throw new \InvalidArgumentException("Unsupported source type: {$sourceType}"),
         };
+
+        return new UnifiedSourceProcessor($duplicateProcessor, $strategy);
     }
 
     public static function validate(string $sourceType, ?string $sourceUrl): ?\Illuminate\Http\RedirectResponse
