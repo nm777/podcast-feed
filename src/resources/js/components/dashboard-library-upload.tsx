@@ -56,7 +56,10 @@ export default function DashboardLibraryUpload({ libraryItems, onUploadSuccess }
 
     const handleRefresh = () => {
         setIsRefreshing(true);
-        router.reload({ only: ['libraryItems'] });
+        router.reload({
+            only: ['libraryItems'],
+            onFinish: () => setIsRefreshing(false),
+        });
     };
 
     const formatFileSize = (bytes: number) => {
