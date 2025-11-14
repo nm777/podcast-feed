@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\FeedAddItemsRequest;
+use App\Http\Requests\FeedStoreRequest;
 use App\Http\Resources\FeedItemResource;
 use App\Http\Resources\FeedResource;
 use App\Models\Feed;
@@ -25,23 +27,17 @@ class FeedController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(FeedStoreRequest $request)
     {
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'cover_image_url' => 'nullable|url',
-            'is_public' => 'boolean',
-            'slug' => 'required|string|max:255|unique:feeds,slug,NULL,id,user_id,'.Auth::user()->id,
-        ]);
+        $validated = $request->validated();
 
         $feed = Feed::create([
             'user_id' => Auth::user()->id,
-            'title' => $request->title,
-            'description' => $request->description,
-            'cover_image_url' => $request->cover_image_url,
-            'is_public' => $request->is_public ?? false,
-            'slug' => $request->slug,
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? null,
+            'cover_image_url' => $validated['cover_image_url'] ?? null,
+            'is_public' => $validated['is_public'] ?? false,
+            'slug' => $validated['slug'],
             'user_guid' => (string) Str::uuid(),
             'token' => (string) Str::random(32),
         ]);
@@ -49,17 +45,13 @@ class FeedController extends Controller
         return (new FeedResource($feed))->response()->setStatusCode(201);
     }
 
-    public function addItems(Request $request, Feed $feed)
+    public function addItems(FeedAddItemsRequest $request, Feed $feed)
     {
         $this->authorize('update', $feed);
 
-        $request->validate([
-            'items' => 'required|array',
-            'items.*.library_item_id' => 'required|exists:library_items,id,user_id,'.Auth::user()->id,
-            'items.*.sequence' => 'required|integer',
-        ]);
+        $validated = $request->validated();
 
-        foreach ($request->items as $item) {
+        foreach ($validated['items'] as $item) {
             $feed->items()->create($item);
         }
 

@@ -75,6 +75,9 @@ describe('API Library Controller Validation', function () {
     it('accepts valid library item data', function () {
         $this->actingAs($this->user);
 
+        // Fake the queue to avoid actual processing
+        \Illuminate\Support\Facades\Queue::fake();
+
         $response = $this->postJson('/api/library', [
             'title' => 'Valid Library Item',
             'description' => 'A valid description',
@@ -84,7 +87,10 @@ describe('API Library Controller Validation', function () {
 
         $response->assertStatus(201);
 
-        // Assert the response contains expected data
+        // Assert job was dispatched
+        \Illuminate\Support\Facades\Queue::assertPushed(\App\Jobs\ProcessMediaFile::class);
+
+        // Assert response contains expected data
         $response->assertJsonPath('data.title', 'Valid Library Item');
         $response->assertJsonPath('data.source_type', 'url');
         $response->assertJsonPath('data.source_url', 'https://example.com/audio.mp3');

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\ApiException;
 use App\Http\Controllers\Controller;
 use App\Services\YouTubeVideoInfoService;
 use Illuminate\Http\JsonResponse;
@@ -20,7 +21,7 @@ class YouTubeController extends Controller
         $videoInfo = $this->youTubeVideoInfoService->getVideoInfo($videoId);
 
         if (! $videoInfo) {
-            return response()->json(['error' => 'Video not found'], 404);
+            throw new ApiException('Video not found', 'VIDEO_NOT_FOUND', 404);
         }
 
         return response()->json($videoInfo);

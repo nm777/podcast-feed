@@ -18,7 +18,7 @@ test('returns duplicate status for existing URL', function () {
         'source_url' => 'https://example.com/existing-audio.mp3',
     ]);
 
-    $response = $this->actingAs($user)->postJson('/check-url-duplicate', [
+    $response = $this->actingAs($user)->postJson('/api/check-url', [
         'url' => 'https://example.com/existing-audio.mp3',
     ]);
 
@@ -36,7 +36,7 @@ test('returns duplicate status for existing URL', function () {
 test('returns not duplicate for new URL', function () {
     $user = User::factory()->create();
 
-    $response = $this->actingAs($user)->postJson('/check-url-duplicate', [
+    $response = $this->actingAs($user)->postJson('/api/check-url', [
         'url' => 'https://example.com/new-audio.mp3',
     ]);
 
@@ -50,18 +50,22 @@ test('returns not duplicate for new URL', function () {
 test('validates URL format', function () {
     $user = User::factory()->create();
 
-    $response = $this->actingAs($user)->postJson('/check-url-duplicate', [
+    $response = $this->actingAs($user)->postJson('/api/check-url', [
         'url' => 'not-a-valid-url',
     ]);
 
     $response->assertStatus(422);
+    $response->assertJsonStructure([
+        'message',
+        'errors',
+    ]);
     $response->assertJson([
-        'error' => 'Invalid URL',
+        'message' => 'Please provide a valid URL.',
     ]);
 });
 
 test('requires authentication', function () {
-    $response = $this->postJson('/check-url-duplicate', [
+    $response = $this->postJson('/api/check-url', [
         'url' => 'https://example.com/test.mp3',
     ]);
 

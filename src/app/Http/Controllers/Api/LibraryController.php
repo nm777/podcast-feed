@@ -36,9 +36,9 @@ class LibraryController extends Controller
         $sourceUrl = $validated['source_url'] ?? null;
 
         if ($redirectResponse = SourceProcessorFactory::validate($sourceType, $sourceUrl)) {
-            return response()->json(
+            throw new \App\Exceptions\ValidationException(
                 $redirectResponse->getSession()->get('errors', []),
-                422
+                'Source URL validation failed'
             );
         }
 
