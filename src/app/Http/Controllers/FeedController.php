@@ -41,7 +41,7 @@ class FeedController extends Controller
             'is_public' => $validated['is_public'] ?? false,
         ]);
 
-        return redirect()->route('dashboard')->with('success', 'Feed created successfully!');
+        return redirect()->route('feeds.edit', $feed)->with('success', 'Feed created successfully!');
     }
 
     /**

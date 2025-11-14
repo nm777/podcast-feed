@@ -44,7 +44,9 @@ test('user can create a new feed', function () {
         'is_public' => true,
     ]);
 
-    $response->assertRedirect('/dashboard');
+    $feed = $user->feeds()->latest()->first();
+
+    $response->assertRedirect("/feeds/{$feed->id}/edit");
     $response->assertSessionHas('success', 'Feed created successfully!');
 
     $this->assertDatabaseHas('feeds', [
@@ -62,7 +64,9 @@ test('user can create a feed with minimal data', function () {
         'title' => 'Minimal Feed',
     ]);
 
-    $response->assertRedirect('/dashboard');
+    $feed = $user->feeds()->latest()->first();
+
+    $response->assertRedirect("/feeds/{$feed->id}/edit");
     $response->assertSessionHas('success', 'Feed created successfully!');
 
     $this->assertDatabaseHas('feeds', [
