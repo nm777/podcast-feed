@@ -30,11 +30,10 @@ jobs:
           coverage: xdebug
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version-file: 'src/.nvmrc'
           cache: 'npm'
-          cache-dependency-path: '../package-lock.json'
 
       - name: Install Node Dependencies
         run: npm ci
