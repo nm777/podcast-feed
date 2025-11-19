@@ -21,6 +21,11 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'is_admin',
+        'approval_status',
+        'approved_at',
+        'rejected_at',
+        'rejection_reason',
     ];
 
     /**
@@ -50,6 +55,63 @@ class User extends Authenticatable
     }
 
     /**
+     * Check if user is an admin.
+     */
+    public function isAdmin(): bool
+    {
+        return $this->is_admin;
+    }
+
+    /**
+     * Check if user is approved.
+     */
+    public function isApproved(): bool
+    {
+        return $this->approval_status === 'approved';
+    }
+
+    /**
+     * Check if user is pending approval.
+     */
+    public function isPending(): bool
+    {
+        return $this->approval_status === 'pending';
+    }
+
+    /**
+     * Check if user is rejected.
+     */
+    public function isRejected(): bool
+    {
+        return $this->approval_status === 'rejected';
+    }
+
+    /**
+     * Approve the user.
+     */
+    public function approve(): void
+    {
+        $this->update([
+            'approval_status' => 'approved',
+            'approved_at' => now(),
+            'rejected_at' => null,
+            'rejection_reason' => null,
+        ]);
+    }
+
+    /**
+     * Reject the user.
+     */
+    public function reject(string $reason = null): void
+    {
+        $this->update([
+            'approval_status' => 'rejected',
+            'rejected_at' => now(),
+            'rejection_reason' => $reason,
+        ]);
+    }
+
+    /**
      * Get attributes that should be cast.
      *
      * @return array<string, string>
@@ -59,6 +121,9 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_admin' => 'boolean',
+            'approved_at' => 'datetime',
+            'rejected_at' => 'datetime',
         ];
     }
 }

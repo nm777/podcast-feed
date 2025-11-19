@@ -18,10 +18,11 @@ type LoginForm = {
 
 interface LoginProps {
     status?: string;
+    statusType?: string;
     canResetPassword: boolean;
 }
 
-export default function Login({ status, canResetPassword }: LoginProps) {
+export default function Login({ status, statusType, canResetPassword }: LoginProps) {
     const { data, setData, post, processing, errors, reset } = useForm<Required<LoginForm>>({
         email: '',
         password: '',
@@ -104,7 +105,15 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                 </div>
             </form>
 
-            {status && <div className="mb-4 text-center text-sm font-medium text-green-600">{status}</div>}
+            {status && (
+                <div className={`mb-4 text-center text-sm font-medium ${
+                    statusType === 'error' ? 'text-red-600' : 
+                    statusType === 'warning' ? 'text-yellow-600' : 
+                    'text-green-600'
+                }`}>
+                    {status}
+                </div>
+            )}
         </AuthLayout>
     );
 }
