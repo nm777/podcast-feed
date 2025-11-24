@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Run database migrations
 php artisan migrate --force

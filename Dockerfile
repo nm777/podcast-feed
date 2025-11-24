@@ -62,11 +62,7 @@ RUN chown -R www-data:www-data /var/www/html \
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 # Install Node.js dependencies and build assets
-RUN npm install \
-    && npm run build
-
-# Copy environment file
-RUN cp .env.example .env
+RUN npm install && npm run build
 
 # Expose port 9000 for PHP-FPM
 EXPOSE 9000
